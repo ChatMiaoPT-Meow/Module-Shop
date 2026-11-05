@@ -53,6 +53,8 @@ public final class SignInCalendar {
     private final boolean editable;
     private final boolean allowMakeup;
     private final List<Hit> hits = new ArrayList<>();
+    /** false 时不做悬停（被下拉等浮层盖住时）：不高亮、不显示提示。 */
+    private boolean hoverEnabled = true;
     private final float[] hoverT = new float[31];
 
     public SignInCalendar(boolean editable, boolean allowMakeup) {
@@ -67,6 +69,12 @@ public final class SignInCalendar {
             ClientShopData.signInMonth = now.getYear() * 12 + now.getMonthValue() - 1;
         }
         return YearMonth.of(ClientShopData.signInMonth / 12, ClientShopData.signInMonth % 12 + 1);
+    }
+
+    /** 被浮层（例如管理面板的模块下拉）盖住时关掉悬停效果与提示。 */
+    public SignInCalendar hoverEnabled(boolean enabled) {
+        this.hoverEnabled = enabled;
+        return this;
     }
 
     /** 绘制日历，返回底边 y。 */
@@ -126,7 +134,8 @@ public final class SignInCalendar {
             List<ClientShopData.ActivityView> acts = activitiesOf(epochDay);
             boolean adminEdit = editable && ClientShopData.canAdmin;
             boolean clickable = adminEdit || (allowMakeup && canMakeup);
-            boolean hover = f.mouseX() >= cx && f.mouseX() < cx + cw && f.mouseY() >= cy && f.mouseY() < cy + ch;
+            boolean hover = hoverEnabled && f.mouseX() >= cx && f.mouseX() < cx + cw
+                    && f.mouseY() >= cy && f.mouseY() < cy + ch;
             hoverT[d - 1] = Motion.approach(hoverT[d - 1], hover && clickable ? 1.0F : 0.0F, f.dtMs(),
                     Motion.HOVER_MS);
 
@@ -177,7 +186,8 @@ public final class SignInCalendar {
     }
 
     private void arrow(Canvas canvas, PageFrame f, float x, float y, String label, String action) {
-        boolean hover = f.mouseX() >= x && f.mouseX() < x + ARROW && f.mouseY() >= y && f.mouseY() < y + ARROW;
+        boolean hover = hoverEnabled && f.mouseX() >= x && f.mouseX() < x + ARROW
+                && f.mouseY() >= y && f.mouseY() < y + ARROW;
         Draw.fill(canvas, x, y, ARROW, ARROW, 2.0F, hover ? IOStyle.GRAY_BTN_HOVER : IOStyle.GRAY_BTN);
         Draw.stroke(canvas, x, y, ARROW, ARROW, 2.0F, 1.0F, hover ? IOStyle.BORDER_HOVER : IOStyle.BORDER_DIM);
         Text.drawLine(canvas, label, AtomUi.BOLD, Text.BODY, IOStyle.TEXT, x, y + ARROW / 2.0F, ARROW,

@@ -67,6 +67,7 @@ public final class DailyPage implements ShopPage {
     private boolean listMode;
     private float gridX, gridY;
     private float listX, listY, listW, listH;
+    private float rowW;
 
     @Override
     public String id() {
@@ -257,8 +258,8 @@ public final class DailyPage implements ShopPage {
         scroll.update();
         savedScroll = scroll.offset();
 
-        float rowW = listW - 2.0F - (scroll.canScroll() ? 6.0F : 0.0F);
-        boolean inList = f.mouseX() >= listX && f.mouseX() < listX + rowW
+        rowW = listW - 2.0F - (scroll.canScroll() ? 6.0F : 0.0F);
+        boolean inList = f.mouseX() >= listX + 2.0F && f.mouseX() < listX + 2.0F + rowW
                 && f.mouseY() >= listY && f.mouseY() < listY + listH;
         int saved = canvas.save();
         f.host().items().pushClip(listX, listY, listW, listH);
@@ -338,6 +339,11 @@ public final class DailyPage implements ShopPage {
     }
 
     private void drawBottomBar(Canvas canvas, PageFrame f, int count) {
+        // 与旧版一致：商品为空时不显示「刷新商店」
+        refresh.visible(count > 0);
+        if (count == 0) {
+            return;
+        }
         float barMid = f.barTop() + PageFrame.BAR_H / 2.0F;
         boolean canRefresh = ClientShopData.refreshCost >= 0L;
         float refreshX = f.x() + f.w() - 4.0F - 58.0F;
@@ -380,7 +386,7 @@ public final class DailyPage implements ShopPage {
 
     @Override
     public boolean mouseClicked(PageFrame f, double mx, double my, int button) {
-        if (refresh.mouseClicked(mx, my, button)) {
+        if (refresh.isVisible() && refresh.mouseClicked(mx, my, button)) {
             return true;
         }
         int count = ClientShopData.dailyShop.size();
@@ -391,7 +397,7 @@ public final class DailyPage implements ShopPage {
             if (scroll.pressBar(mx, my, listX, listY, listW, listH)) {
                 return true;
             }
-            if (mx >= listX && mx < listX + listW - 6.0F && my >= listY && my < listY + listH) {
+            if (mx >= listX + 2.0F && mx < listX + 2.0F + rowW && my >= listY && my < listY + listH) {
                 float local = (float) (my - listY + scroll.offset());
                 int index = (int) (local / ROW_H);
                 if (index >= 0 && index < count && local - index * ROW_H < BAR_CARD_H) {

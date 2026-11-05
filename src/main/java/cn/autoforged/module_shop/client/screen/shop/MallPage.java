@@ -133,6 +133,11 @@ public final class MallPage implements ShopPage {
         if (recent) {
             closeMenus();
             search.visible(false);
+            // 货架视图的控件这一帧不画，也必须不可点（否则按上一帧的位置仍能被点中）
+            for (Button b : new Button[]{searchBtn, favBtn, sortBtn, catBtn, recentBtn, prevBtn, nextBtn}) {
+                b.visible(false);
+            }
+            backBtn.visible(true);
             backBtn.onClick(() -> {
                 f.host().action("mall_recent_toggle", null);
                 recentScroll.reset();
@@ -143,6 +148,10 @@ public final class MallPage implements ShopPage {
             return;
         }
 
+        backBtn.visible(false);
+        for (Button b : new Button[]{searchBtn, favBtn, sortBtn, catBtn, recentBtn}) {
+            b.visible(true);
+        }
         // ---- 第一行：搜索 + 只看收藏 ----
         search.bounds(cx, cy, SEARCH_W, CTRL_H).visible(true);
         search.render(canvas, f.mouseX(), f.mouseY(), f.dtMs());
@@ -286,19 +295,24 @@ public final class MallPage implements ShopPage {
 
     /** 五角星（收藏标记）：实心 = 已收藏，空心 = 未收藏。 */
     private static void star(Canvas canvas, float cx, float cy, float r, boolean filled, int color) {
-        PathBuilder pb = new PathBuilder();
-        for (int i = 0; i < 10; i++) {
-            double a = -Math.PI / 2.0D + i * Math.PI / 5.0D;
-            float rr = i % 2 == 0 ? r : r * 0.45F;
-            float px = cx + (float) Math.cos(a) * rr;
-            float py = cy + (float) Math.sin(a) * rr;
-            if (i == 0) {
-                pb.moveTo(px, py);
-            } else {
-                pb.lineTo(px, py);
+        try (PathBuilder pb = new PathBuilder()) {
+            for (int i = 0; i < 10; i++) {
+                double a = -Math.PI / 2.0D + i * Math.PI / 5.0D;
+                float rr = i % 2 == 0 ? r : r * 0.45F;
+                float px = cx + (float) Math.cos(a) * rr;
+                float py = cy + (float) Math.sin(a) * rr;
+                if (i == 0) {
+                    pb.moveTo(px, py);
+                } else {
+                    pb.lineTo(px, py);
+                }
             }
+            pb.closePath();
+            drawPath(canvas, pb, filled, color);
         }
-        pb.closePath();
+    }
+
+    private static void drawPath(Canvas canvas, PathBuilder pb, boolean filled, int color) {
         try (Path path = pb.build()) {
             if (filled) {
                 STAR.setColor(color);
@@ -445,8 +459,13 @@ public final class MallPage implements ShopPage {
         boolean recent = ClientShopData.mallViewRecent;
         // 下拉展开：这次点击只归下拉处理（点选项应用，点别处只收起）
         if (!recent && (sortOpen || catOpen)) {
-            if (button == 0 && mx >= menuX && mx < menuX + menuW && my >= menuY + 2.0F
-                    && my < menuY + menuH - 2.0F) {
+            boolean inMenu = mx >= menuX && mx < menuX + menuW && my >= menuY && my < menuY + menuH;
+            boolean onRow = mx >= menuX + 2.0F && mx < menuX + menuW - 6.0F
+                    && my >= menuY + 2.0F && my < menuY + menuH - 2.0F;
+            if (inMenu && !onRow) {
+                return true;
+            }
+            if (button == 0 && onRow) {
                 int row = (int) ((my - menuY - 2.0F) / MENU_ROW);
                 if (sortOpen && row >= 0 && row < 5) {
                     ClickSound.play();
@@ -466,9 +485,10 @@ public final class MallPage implements ShopPage {
                 closeMenus();
                 return true;
             }
-            // 点到下拉按钮本身：交给按钮切换；其它地方只收起
+            // 点到下拉按钮本身：交给按钮切换；其它地方只收起（顺带让搜索框失焦）
             if (!(sortBtn.isMouseOver(mx, my) || catBtn.isMouseOver(mx, my))) {
                 closeMenus();
+                search.blur();
                 return true;
             }
         }
@@ -497,9 +517,11 @@ public final class MallPage implements ShopPage {
             ClientShopData.MallView view = shown.get(index);
             CompoundTag extra = new CompoundTag();
             extra.putInt("index", view.shelf);
-            if (button == 0 && overStar(mx, my, x, y)) {
-                f.host().action("mall_star", extra); // 收藏动作自己会播放点击音
-                return true;
+            if (overStar(mx, my, x, y)) {
+                if (button == 0) {
+                    f.host().action("mall_star", extra); // 收藏动作自己会播放点击音
+                }
+                return true; // 与旧版一致：星标区域的右键什么都不做（不会触发批量购买）
             }
             if (button == 0 || button == 1) {
                 if (!view.soldOut()) {
@@ -569,6 +591,7 @@ public final class MallPage implements ShopPage {
         }
         if (search != null) {
             search.blur();
+            search.visible(false); // 切走后隐藏背后的输入框，下次渲染时重新显示
         }
     }
 }

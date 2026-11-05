@@ -130,7 +130,7 @@ public final class AdminPage implements ShopPage {
         listW = cw - 8.0F;
         demandRows = List.of();
         if (signin) {
-            calendar(host).render(canvas, f, cx, cy + 20.0F, cw);
+            calendar(host).hoverEnabled(!menuOpen).render(canvas, f, cx, cy + 20.0F, cw);
         } else if (!pool.isEmpty()) {
             renderOffers(canvas, f, mode, mall, ship, shop);
         } else if (stalls) {
@@ -506,7 +506,9 @@ public final class AdminPage implements ShopPage {
             extra.putString("mode", mode);
             extra.putInt("index", index);
             ClickSound.play();
-            host.action(broken ? "admin_remove_broken" : (button == 0 ? "admin_edit_gui" : "admin_remove"), extra);
+            String action = broken ? (button == 0 ? "admin_remove" : "admin_remove_broken")
+                    : (button == 0 ? "admin_edit_gui" : "admin_remove");
+            host.action(action, extra);
             return true;
         }
         return false;

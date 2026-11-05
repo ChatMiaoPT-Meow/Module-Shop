@@ -230,6 +230,7 @@ public final class PlayerPickerPage implements ShopPage {
         requests.cancelPress();
         if (search != null) {
             search.blur();
+            search.visible(false); // 下次渲染时重新显示；不渲染期间不能被点中
         }
     }
 }

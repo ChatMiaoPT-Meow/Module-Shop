@@ -54,6 +54,24 @@ public final class SkiaTextField extends UiComponent {
         // 原版文字与光标完全不画，只保留输入能力
         box.setTextColor(0x00FFFFFF);
         box.setTextColorUneditable(0x00FFFFFF);
+        // 第一次渲染前不可见：否则它停在 (0,0) 仍能被原版点击逻辑点中、悄悄抢走焦点
+        box.setVisible(false);
+    }
+
+    /**
+     * 隐藏时同步隐藏背后的 EditBox 并让它失焦：页面不渲染这个输入框时（切到别的页签 / 别的视图），
+     * 它不能还留在屏幕上被原版点击逻辑点中、接收键盘输入。
+     */
+    @Override
+    public SkiaTextField visible(boolean visible) {
+        super.visible(visible);
+        if (!visible) {
+            if (box.isFocused()) {
+                blur();
+            }
+            box.setVisible(false);
+        }
+        return this;
     }
 
     /** 给 Screen 的 {@code addWidget(...)} 用。 */
@@ -108,6 +126,7 @@ public final class SkiaTextField extends UiComponent {
     @Override
     public void render(Canvas canvas, float mouseX, float mouseY, float dtMs) {
         if (!visible) {
+            box.setVisible(false);
             return;
         }
         syncEditBox();
