@@ -25,3 +25,12 @@ ${mod_description}
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+# 客户端 UI（壳层、确认框、数值输入）依赖 AtomLib 0.1.0-beta（1.20.1-forge 版）。专用服务器不需要它。
+# 上界排除 0.2.0：输入框只用 0.1.0-beta 现有的文本、布局和指针 API。
+[[dependencies.${mod_id}]]
+    modId="atomlib"
+    mandatory=true
+    versionRange="[0.1.0-beta,0.2.0)"
+    ordering="AFTER"
+    side="CLIENT"

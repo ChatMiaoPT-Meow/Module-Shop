@@ -28,11 +28,13 @@ public final class ClientModEvents {
     private ClientModEvents() {
     }
 
-    /** 注册「打开商店」按键。 */
+    /** 注册「打开商店」与「打开 AtomLib 壳层（开发）」按键。 */
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         ClientEvents.OPEN_SHOP = ClientEvents.createOpenShopKey();
         event.register(ClientEvents.OPEN_SHOP);
+        ClientEvents.OPEN_ATOM_SHELL = ClientEvents.createOpenAtomShellKey();
+        event.register(ClientEvents.OPEN_ATOM_SHELL);
     }
 
     /** 注册容器界面（1.20.1 没有 {@code RegisterMenuScreensEvent}，只能在客户端初始化里注册）。 */

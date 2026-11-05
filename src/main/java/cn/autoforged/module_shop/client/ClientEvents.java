@@ -26,6 +26,8 @@ import org.lwjgl.glfw.GLFW;
 public final class ClientEvents {
     public static final String CATEGORY = "key.categories." + ModuleShopMod.MODID;
     public static KeyMapping OPEN_SHOP;
+    /** 开发用：打开 AtomLib 空壳。默认 F8，不替代商店键，也不发网络包。 */
+    public static KeyMapping OPEN_ATOM_SHELL;
 
     /** 按键的创建器（真正注册在 {@link ClientModEvents} 的 MOD 总线事件里）。 */
     static KeyMapping createOpenShopKey() {
@@ -34,6 +36,22 @@ public final class ClientEvents {
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_K,
                 CATEGORY);
+    }
+
+    static KeyMapping createOpenAtomShellKey() {
+        return new KeyMapping("key." + ModuleShopMod.MODID + ".open_atom_shell",
+                KeyConflictContext.IN_GAME,
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_F8,
+                CATEGORY);
+    }
+
+    /** 取「打开 AtomLib 壳层」按键，和 {@link #openShopKey()} 一样兜一层懒创建。 */
+    public static KeyMapping openAtomShellKey() {
+        if (OPEN_ATOM_SHELL == null) {
+            OPEN_ATOM_SHELL = createOpenAtomShellKey();
+        }
+        return OPEN_ATOM_SHELL;
     }
 
     /**
@@ -110,5 +128,6 @@ public final class ClientEvents {
     @SubscribeEvent
     public static void onClientLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
         cn.autoforged.module_shop.client.screen.Nav.clear();
+        cn.autoforged.module_shop.client.atom.AtomUi.close();
     }
 }
