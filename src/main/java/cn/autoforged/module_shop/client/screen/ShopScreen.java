@@ -10,6 +10,10 @@ import cn.autoforged.module_shop.client.UITheme;
 import cn.autoforged.module_shop.client.screen.shop.AuctionPage;
 import cn.autoforged.module_shop.client.screen.shop.BuybackPage;
 import cn.autoforged.module_shop.client.screen.shop.DemandPage;
+import cn.autoforged.module_shop.client.screen.shop.DailyPage;
+import cn.autoforged.module_shop.client.screen.shop.SignInPage;
+import cn.autoforged.module_shop.client.screen.shop.MallPage;
+import cn.autoforged.module_shop.client.screen.shop.AdminPage;
 import cn.autoforged.module_shop.client.screen.shop.ExchangePage;
 import cn.autoforged.module_shop.client.screen.shop.PlayerPickerPage;
 import cn.autoforged.module_shop.client.screen.shop.StallPage;
@@ -57,6 +61,10 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     // 否则走下面原有的 drawXxx 方法（非 Windows 等 AtomLib 不可用的环境因此仍可正常使用）。
     /** 已迁移页面（页签 id → 页面）。每次迁移一个模块就在这里加一行。 */
     private final Map<String, ShopPage> pages = registerPages(
+            new DailyPage(),
+            new SignInPage(),
+            new MallPage(),
+            new AdminPage(),
             new ExchangePage(),
             new ShippingPage(),
             new MailPage(),
@@ -126,6 +134,40 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     @Override
     public void registerInput(net.minecraft.client.gui.components.EditBox box) {
         addWidget(box);
+    }
+
+    @Override
+    public String adminMode() {
+        return this.adminMode;
+    }
+
+    @Override
+    public int adminPage() {
+        return this.adminPage;
+    }
+
+    @Override
+    public void clampAdminPage(int pages) {
+        this.adminPage = Mth.clamp(this.adminPage, 0, Math.max(0, pages - 1));
+    }
+
+    @Override
+    public boolean signInEditing() {
+        return this.signInEdit;
+    }
+
+    @Override
+    public List<String> adminModules() {
+        List<String> ids = new ArrayList<>();
+        for (AdminModule m : ADMIN_MODULES) {
+            ids.add(m.id());
+        }
+        return ids;
+    }
+
+    @Override
+    public Component moduleName(String id) {
+        return tabLabelWithOriginal(id);
     }
 
     @Override
@@ -701,8 +743,9 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
         // 购物城搜索框：位置跟着面板走；只有购物城页、非编辑模式、非「最近购买」视图时显示。
         if (this.mallSearchBox != null) {
             this.mallSearchBox.setPosition(contentX() + 5, contentY() + 4);
+            // 购物城已迁移时由页面自己的 Skija 输入框负责，旧输入框隐藏
             this.mallSearchBox.setVisible("mall".equals(currentTab) && !this.layoutEdit
-                    && !ClientShopData.mallViewRecent);
+                    && !ClientShopData.mallViewRecent && activePage() == null);
         }
         if (this.tradeSearchBox != null) {
             this.tradeSearchBox.setPosition(contentX() + 5, contentY() + 2);
@@ -4045,13 +4088,13 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     // =========================================================== 购物城（新增模块）
 
     /** 一件商品的注册名（收藏 key）。 */
-    private static String mallItemId(ClientShopData.MallView view) {
+    public static String mallItemId(ClientShopData.MallView view) {
         var id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(view.stack.getItem());
         return id == null ? "" : id.toString();
     }
 
     /** 模组的显示名（拿不到就退回命名空间）。 */
-    private static String mallModName(String namespace) {
+    public static String mallModName(String namespace) {
         if (namespace == null || namespace.isEmpty()) {
             return "";
         }
@@ -4065,7 +4108,7 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     }
 
     /** 货架上出现过的模组（按显示名排序，缓存；货架变化时重建）。 */
-    private static List<String> mallCategories() {
+    public static List<String> mallCategories() {
         if (mallModCacheSize == ClientShopData.mall.size()) {
             return mallModCache;
         }
@@ -4081,7 +4124,7 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     }
 
     /** 当前搜索 / 分类 / 收藏过滤 + 排序后的商品列表（带缓存：货架上万件时不必每帧重排）。 */
-    private static List<ClientShopData.MallView> mallFiltered() {
+    public static List<ClientShopData.MallView> mallFiltered() {
         String key = ClientShopData.mallVersion + "|" + ClientShopData.mall.size() + "|" + ClientShopData.mallSearch + "|"
                 + ClientShopData.mallCategory + "|" + ClientShopData.mallFavOnly + "|"
                 + ClientShopData.mallSort + "|" + MallFavorites.size();
@@ -4125,7 +4168,7 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     }
 
     /** 库存文字：无限 / 售罄 / 剩余。 */
-    private Component mallStockText(ClientShopData.MallView view) {
+    public static Component mallStockText(ClientShopData.MallView view) {
         if (view.unlimited()) {
             return Component.translatable("gui.module_shop.mall.stock_unlimited");
         }
@@ -4138,7 +4181,7 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     }
 
     /** 排序项的名称（0 默认 / 1 价格升 …）。 */
-    private static Component mallSortName(int sort) {
+    public static Component mallSortName(int sort) {
         return Component.translatable(switch (sort) {
             case 1 -> "gui.module_shop.mall.sort_price_asc";
             case 2 -> "gui.module_shop.mall.sort_price_desc";
@@ -4487,7 +4530,7 @@ public class ShopScreen extends Screen implements JeiHoverSource, ShopHost {
     }
 
     /** 最近购买的时间：MM-dd HH:mm。 */
-    private static String mallTimeText(long millis) {
+    public static String mallTimeText(long millis) {
         return java.time.Instant.ofEpochMilli(millis)
                 .atZone(java.time.ZoneId.systemDefault())
                 .format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"));

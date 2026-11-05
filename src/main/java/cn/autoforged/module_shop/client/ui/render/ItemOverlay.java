@@ -29,7 +29,7 @@ public final class ItemOverlay {
         }
     }
 
-    private record Entry(ItemStack stack, float x, float y, float size, boolean decorations, Clip clip,
+    private record Entry(ItemStack stack, float x, float y, float size, float scaleX, boolean decorations, Clip clip,
                          java.util.function.BiConsumer<GuiGraphics, Font> custom) {
     }
 
@@ -77,15 +77,24 @@ public final class ItemOverlay {
 
     /** 登记一个物品；size 为边长（GUI 像素），原版图标为 16。 */
     public void add(ItemStack stack, float x, float y, float size, boolean decorations) {
-        if (stack == null || stack.isEmpty()) {
+        add(stack, x, y, size, 1.0F, decorations);
+    }
+
+    /**
+     * 登记一个横向额外压缩的物品（翻牌动画用）：高为 size，宽为 size × scaleX，(x, y) 为压缩后的左上角。
+     * scaleX 很小（牌转到侧面）时不画，也不参与悬停检测。
+     */
+    public void add(ItemStack stack, float x, float y, float size, float scaleX, boolean decorations) {
+        if (stack == null || stack.isEmpty() || scaleX <= 0.05F) {
             return;
         }
+        float w = size * scaleX;
         Clip clip = clips.peek();
-        if (clip != null && (x >= clip.x1 || y >= clip.y1 || x + size <= clip.x0 || y + size <= clip.y0)) {
+        if (clip != null && (x >= clip.x1 || y >= clip.y1 || x + w <= clip.x0 || y + size <= clip.y0)) {
             return; // 完全在裁剪区外
         }
-        entries.add(new Entry(stack, x, y, size, decorations, clip, null));
-        if (hoverEnabled && mouseX >= x && mouseX < x + size && mouseY >= y && mouseY < y + size
+        entries.add(new Entry(stack, x, y, size, scaleX, decorations, clip, null));
+        if (hoverEnabled && mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + size
                 && (clip == null || clip.contains(mouseX, mouseY))) {
             hovered = stack;
         }
@@ -101,7 +110,7 @@ public final class ItemOverlay {
         if (clip != null && (x >= clip.x1 || y >= clip.y1 || x + w <= clip.x0 || y + h <= clip.y0)) {
             return;
         }
-        entries.add(new Entry(ItemStack.EMPTY, x, y, 0.0F, false, clip, painter));
+        entries.add(new Entry(ItemStack.EMPTY, x, y, 0.0F, 1.0F, false, clip, painter));
     }
 
     /** 把本帧登记的物品画出来。必须在 Skija 绘制（SkiaFrame.draw）之后调用。 */
@@ -129,7 +138,7 @@ public final class ItemOverlay {
             float scale = e.size / 16.0F;
             graphics.pose().pushPose();
             graphics.pose().translate(e.x, e.y, 0.0F);
-            graphics.pose().scale(scale, scale, 1.0F);
+            graphics.pose().scale(scale * e.scaleX, scale, 1.0F);
             graphics.renderItem(e.stack, 0, 0);
             if (e.decorations) {
                 graphics.renderItemDecorations(font, e.stack, 0, 0);

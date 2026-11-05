@@ -278,7 +278,7 @@ public final class DemandPage implements ShopPage {
     }
 
     /** 悬赏内容的一行文字（金币 + 物品）。 */
-    private static String rewardLine(DemandEntry e) {
+    static String rewardLine(DemandEntry e) {
         String money = e.rewardMoney > 0L ? ClientShopData.money(e.rewardMoney) : null;
         String item = e.rewardItem != null && !e.rewardItem.isEmpty()
                 ? e.rewardItem.getHoverName().getString() + " x" + e.rewardItem.getCount() : null;
