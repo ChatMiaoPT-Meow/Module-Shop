@@ -4,11 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import org.lwjgl.opengl.GL11;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
@@ -135,7 +131,8 @@ public final class ItemOverlay {
         if (entries.isEmpty()) {
             return;
         }
-        prepareItemState();
+        // 叠画物品前复位原版渲染状态（见 SkiaFrame#restoreVanillaState，1.20.1 图标闪烁修复）
+        SkiaFrame.restoreVanillaState();
         Clip active = null;
         boolean scissor = false;
         for (int i = 0; i < entries.size(); i++) {
@@ -175,24 +172,6 @@ public final class ItemOverlay {
             graphics.disableScissor();
         }
         graphics.flush();
-    }
-
-    /**
-     * 叠画物品前把原版物品渲染依赖的全局状态设回标准值。
-     *
-     * <p>1.20.1 实测：页面物品图标偶尔有一两帧不显示（看起来在闪）。Skija 的 GL 状态由 AtomLib 完整恢复，
-     * 但同一帧里其它渲染（别的模组的界面事件等）可能留下非白的着色颜色 / 物品光照 / 深度缓冲内容，
-     * 原版画物品会直接沿用它们。这里统一复位：着色颜色、混合、深度测试与写入、物品光照，并清掉深度缓冲
-     * （物品永远画在页面之上，不需要和之前画过的东西比深度）。
-     */
-    private static void prepareItemState() {
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
-        RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
-        Lighting.setupFor3DItems();
     }
 
     /** 直接指定本帧的悬停物品（例如整行悬停都显示该行物品的 tooltip）。 */
